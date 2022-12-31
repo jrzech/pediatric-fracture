@@ -27,7 +27,7 @@ class RadDataset(Dataset):
         self.metadata=usemetadata
         self.bodyparts=bodyparts
         self.target=target[0]
-        print("NEED TO RE-EXTEND RAD_DATASET TO MULTIPLE TARGETS - ONLY LEARNING " +self.target) 
+        print("note - only learning one target: " +self.target) 
         if not self.bodyparts=="any": self.bodyparts=self.bodyparts.split("&")
         self.sample=sample
         print("initial size")

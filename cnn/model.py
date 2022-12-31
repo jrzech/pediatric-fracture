@@ -45,6 +45,7 @@ def checkpoint(model, best_loss, epoch, LR,optimizer,scheduler):
         best_loss: best val loss achieved so far in training
         epoch: current epoch of training
         LR: current learning rate in training
+        scheduler: current scheduler
     Returns:
         None
     """
@@ -80,10 +81,10 @@ def train_model(
         dataset_sizes,
         weight_decay,PATH_TO_IMAGES,data_transforms):
     """
-    Fine tunes torchvision model to NIH CXR data.
+    Fine tunes torchvision model
 
     Args:
-        model: torchvision model to be finetuned (densenet-121 in this case)
+        model: torchvision model to be finetuned (effnetv2s in this case)
         criterion: loss criterion (binary cross entropy loss, BCELoss)
         optimizer: optimizer to use in training (SGD)
         LR: learning rate
@@ -91,6 +92,8 @@ def train_model(
         dataloaders: pytorch train and val dataloaders
         dataset_sizes: length of train and val datasets
         weight_decay: weight decay parameter we use in SGD with momentum
+        PATH_TO_IMAGES: path to images
+        data_transforms: transforms for data
     Returns:
         model: trained torchvision model
         best_epoch: epoch on which best model val loss was obtained
@@ -127,7 +130,7 @@ def train_model(
                 i += 1
                 inputs, labels, names = data
                 check=inputs.cpu().data.numpy()
-                #this lets one see example images as they are preprocessed and presented to model, can be useful for debugging preprocessing mistakes
+                #this lets one see example images as they are preprocessed and presented to model, can be useful for debugging preprocessing errors. by default off 
                 DEBUG_IMAGE_PROCESSING=False
                 if DEBUG_IMAGE_PROCESSING:
                     for k in range(0,inputs.shape[0]):
@@ -235,6 +238,15 @@ def train_cnn(PATH_TO_IMAGES, LR, WEIGHT_DECAY,IMAGE_SIZE,AUGMENT,CLAHE,BATCH_SI
         PATH_TO_IMAGES: path to NIH images
         LR: learning rate
         WEIGHT_DECAY: weight decay parameter for SGD
+        IMAGE_SIZE: pixel size to resize images to (assumes square, e.g. IMAGE_SIZE=512 resizes to 512x512)
+        AUGMENT: augment training data with Albumentations transforms
+        BATCH_SIZE: size of trianing batches
+        USE_METADATA: replace 2/3 RGB channels with patients age and sex
+        BODYPARTS: x-rays of these regions are included in dataset
+        SAMPLE: use only a limited sample of the data (n for train, n/5 for tune).
+        OPTIMIZER: default optimizer ("SGD","Adam")
+        TARGET: target for training in form ["target"]. Please note only trains to one target as currently constructed.
+        EPOCHS: max epochs for training
 
     Returns:
         preds: torchvision model predictions on test fold with ground truth for comparison
@@ -263,7 +275,7 @@ def train_cnn(PATH_TO_IMAGES, LR, WEIGHT_DECAY,IMAGE_SIZE,AUGMENT,CLAHE,BATCH_SI
     SIZE=IMAGE_SIZE
     
     if (AUGMENT and USE_METADATA):
-        print("note!! USE_METADATA so suppress randombrightnesscontrast augmentation")
+        print("note -- USE_METADATA so suppress randombrightnesscontrast augmentation")
         data_transforms = { 
             'train':A.Compose([
                 A.RandomRotate90(p=0.5),
@@ -308,7 +320,7 @@ def train_cnn(PATH_TO_IMAGES, LR, WEIGHT_DECAY,IMAGE_SIZE,AUGMENT,CLAHE,BATCH_SI
         }
 
     else:
-        print("no augmentation!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        print("no augmentation")
         data_transforms = {
             'train': A.Compose([
                 A.LongestMaxSize(max_size=SIZE, interpolation=cv2.INTER_AREA),
@@ -356,21 +368,16 @@ def train_cnn(PATH_TO_IMAGES, LR, WEIGHT_DECAY,IMAGE_SIZE,AUGMENT,CLAHE,BATCH_SI
     if not use_gpu:
         raise ValueError("Error, requires GPU")
     
-    #torchvision efficientnet. so many others one can try in torchvision - efficientnet_v2_l, efficientnet_b7, etc.
+    #torchvision efficientnetv2s
     model = torchvision.models.efficientnet_v2_s(weights='DEFAULT')
-    #specifics of how one modifies imagenet-pretrained model to your # classes depends on model but
-    #effnet implementations follow this convention:
+    #specifics of how one modifies imagenet-pretrained model to your # classes depends on model but torchvision effnet implementations follow this convention:
     num_ftrs = model.classifier[1].in_features
     model.classifier[1] = nn.Sequential(
         nn.Linear(num_ftrs, N_LABELS), nn.Sigmoid())    
 
     #for example if we wanted to use other models:
     #model = torchvision.models.ViT_L_16(ViT_L_16_Weights.IMAGENET1K_SWAG_E2E_V1)
-    #num_ftrs = model.heads[0].in_features #for ViT
-
-    #print("LOAD PRETRAIN")
-    #checkpoint_best = torch.load('/home/jrzech/research/code/cnn/results-pedue-cropnorm-8bit-pickup/checkpoint')
-    #model = checkpoint_best['model'] 
+    #num_ftrs = model.heads[0].in_features # for ViT_L
     
     # put model on GPU
     model = model.cuda()

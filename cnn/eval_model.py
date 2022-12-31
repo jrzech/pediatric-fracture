@@ -10,7 +10,7 @@ from torch.autograd import Variable
 import numpy as np
 import warnings
 
-#don't want to see deprecation warnings for pd append rn
+#don't want to see deprecation warnings for pd append currently
 warnings.filterwarnings("ignore")
 
 
@@ -22,6 +22,10 @@ def make_pred_multilabel(data_transforms, model, PATH_TO_IMAGES,IMAGE_SIZE,CLAHE
         data_transforms: albumentations transforms to preprocess raw images; same as validation transforms
         model: effnetv2s from torchvision previously fine tuned to training data
         PATH_TO_IMAGES: path at which images can be found
+        IMAGE_SIZE: image size
+        CLAHE: use CLAHE transform (bool)
+        USE_METADATA: option to incorporate metadata (age/sex) into predictions in RGB channels (bool)
+        BODYPARTS: list of body parts included
     Returns:
         pred_df: dataframe containing individual predictions and ground truth for each test image
         auc_df: dataframe containing aggregate AUCs by train/test tuples
@@ -45,8 +49,8 @@ def make_pred_multilabel(data_transforms, model, PATH_TO_IMAGES,IMAGE_SIZE,CLAHE
     # create empty dfs
     FILENAME="filename"
     FINDING ="fx"
-    pred_df = pd.DataFrame()#columns=[FILENAME])
-    true_df = pd.DataFrame()#columns=[FILENAME])
+    pred_df = pd.DataFrame()
+    true_df = pd.DataFrame()
 
     # iterate over dataloader
     for i, data in enumerate(dataloader):

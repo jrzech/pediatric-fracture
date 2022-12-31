@@ -1,10 +1,9 @@
+#with deep gratitude to the team at Meta AI who developed and maintain PyTorch and 
+#Detectron2 and to Kaggle user corochann from whose example notebook much code was adapted:
+#https://www.kaggle.com/code/corochann/vinbigdata-detectron2-train
+
 IMAGE_FOLDER_PATH="/home/appuser/detectron2_repo/SHARED/image/pedue-cropnorm-8bit-COPY/"
 METADATA_FILE_PATH="/home/appuser/detectron2_repo/SHARED/metadata/bbox-2classonly.csv"
-#INCLUDE_CATEGORIES=['image_negative','image_positive','fracture','effusion',
-#'clavicle-fracture','shoulder-fracture','humerus-fracture','elbow-fracture','forearm-fracture',
-#'wrist-fracture','hand-fracture','finger-fracture','ue-infant-fracture',
-#'clavicle-effusion','shoulder-effusion','humerus-effusion','elbow-effusion','forearm-effusion',
-#'wrist-effusion','hand-effusion','finger-effusion','ue-infant-effusion']
 READ_IMAGE_LIMIT = 0
 EVAL_ITER=25000
 OUTPUT_DIR='/home/appuser/detectron2_repo/SHARED/output2classonly'
@@ -39,7 +38,6 @@ print(torch.cuda.device_count())
 
 cat_id_dict={}
 x = pd.read_csv(METADATA_FILE_PATH)
-#x=x[x['label'].isin(INCLUDE_CATEGORIES)]
 x=x['label'].unique()
 print(x)
 iter=0
@@ -49,7 +47,8 @@ for item in x:
         cat_id_dict[x[iter]]=itert
         itert=itert+1
     iter+=1
-#OVERRIDE SO WE CAN MAKE IT BG
+    
+#override for bg
 cat_id_dict["image_negative"]=len(cat_id_dict)
 
 print(cat_id_dict)
@@ -73,7 +72,7 @@ def get_dicts(fold):
     global cat_id_iter
     metadata=pd.read_csv(METADATA_FILE_PATH)
     metadata['fold'] = np.where(metadata['fold'].str.find("test")>=0,"test",metadata['fold'])
-    #metadata=metadata[metadata['label'].isin(INCLUDE_CATEGORIES)]
+
     metadata=metadata[metadata['fold']==fold]
     images = metadata[['image_id']].drop_duplicates()
     
@@ -98,8 +97,7 @@ def get_dicts(fold):
         #is_finding=False
         for j in range(0,len(thismetadata)):
             NEGATIVE=False
-            #if not anno["region_attributes"]
-            is_finding=True                                    ###is_finding - just look at + now
+            is_finding=True                                    
             anno = "polygon"
             bbox = thismetadata.iloc[j]['bbox'].replace("[","").replace("]","").split(",")
             bbox = [int(x) for x in bbox]            
@@ -107,11 +105,11 @@ def get_dicts(fold):
                 NEGATIVE=True
                 bbox=[0,0,record['width'],record['height']]
             cat_id=cat_id_dict[thismetadata.iloc[j]['label']]
-            #override - if it's background, set class appropriately
+            if it's background, set class appropriately
             if NEGATIVE: cat_id=len(cat_id_dict)
             obj = {
                 "bbox": bbox,
-                "bbox_mode": BoxMode.XYXY_ABS, #"segmentation": [poly], #get rid of segmentation
+                "bbox_mode": BoxMode.XYXY_ABS, #"segmentation": [poly], no segmentation
                 "category_id": cat_id,
             }
             objs.append(obj)
@@ -120,7 +118,6 @@ def get_dicts(fold):
             record["annotations"]={}
         else:
             record["annotations"] = objs
-        #print(record)
         dataset_dicts.append(record)           
         continue
             
@@ -145,7 +142,7 @@ def load_yaml(filepath: Union[str, Path]) -> Any:
 
 # --- configs ---
 thing_classes = list(cat_id_dict.keys())
-print("REMOVE LAST THING CLASSES")
+# remove last thing classes, train doesn't require separate class for bg, was here so we could process data above
 thing_classes = thing_classes[:-1]
 category_name_to_id = cat_id_dict
 
@@ -185,12 +182,6 @@ class MyMapper:
         aug_input = T.AugInput(image)
         transforms = self.augmentations(aug_input)
         image = aug_input.image
-
-        # if not self.is_train:
-        #     # USER: Modify this if you want to keep them for some reason.
-        #     dataset_dict.pop("annotations", None)
-        #     dataset_dict.pop("sem_seg_file_name", None)
-        #     return dataset_dict
 
         image_shape = image.shape[:2]  # h, w
         dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
@@ -257,12 +248,6 @@ class AlbumentationsMapper:
             annos.append(d)
         dataset_dict.pop("annotations", None)  # Remove unnecessary field.
 
-        # if not self.is_train:
-        #     # USER: Modify this if you want to keep them for some reason.
-        #     dataset_dict.pop("annotations", None)
-        #     dataset_dict.pop("sem_seg_file_name", None)
-        #     return dataset_dict
-
         image_shape = image.shape[:2]  # h, w
         dataset_dict["image"] = torch.as_tensor(image.transpose(2, 0, 1).astype("float32"))
         instances = utils.annotations_to_instances(annos, image_shape)
@@ -302,7 +287,7 @@ from detectron2.utils.file_io import PathManager
 from detectron2.utils.logger import create_small_table
 
 
-def vin_summarize(self):
+def mod_summarize(self):
     '''
     Compute and display summary metrics for evaluation results.
     Note this functin can *only* be applied on the default parameter setting
@@ -381,11 +366,11 @@ def vin_summarize(self):
     self.stats = summarize()
 
 
-print("HACKING: overriding COCOeval.summarize = vin_summarize...")
-COCOeval.summarize = vin_summarize
+print("overriding COCOeval.summarize = mod_summarize...")
+COCOeval.summarize = mod_summarize
 
 
-class VinbigdataEvaluator(DatasetEvaluator):
+class ModEvaluator(DatasetEvaluator):
     """
     Evaluate AR for object proposals, AP for instance detection/segmentation, AP
     for keypoint detection outputs using COCO's metrics.
@@ -516,7 +501,7 @@ class VinbigdataEvaluator(DatasetEvaluator):
             predictions = self._predictions
 
         if len(predictions) == 0:
-            self._logger.warning("[VinbigdataEvaluator] Did not receive valid predictions.")
+            self._logger.warning("[ModEvaluator] Did not receive valid predictions.")
             return {}
 
         if self._output_dir:
@@ -927,7 +912,7 @@ def _evaluate_predictions_on_coco(
         num_keypoints_gt = len(next(iter(coco_gt.anns.values()))["keypoints"]) // 3
         num_keypoints_oks = len(coco_eval.params.kpt_oks_sigmas)
         assert num_keypoints_oks == num_keypoints_dt == num_keypoints_gt, (
-            f"[VinbigdataEvaluator] Prediction contain {num_keypoints_dt} keypoints. "
+            f"[ModEvaluator] Prediction contain {num_keypoints_dt} keypoints. "
             f"Ground truth contains {num_keypoints_gt} keypoints. "
             f"The length of cfg.TEST.KEYPOINT_OKS_SIGMAS is {num_keypoints_oks}. "
             "They have to agree with each other. For meaning of OKS, please refer to "
@@ -1049,7 +1034,7 @@ class MyTrainer(DefaultTrainer):
             output_folder = os.path.join(cfg.OUTPUT_DIR, "inference")
         # return PascalVOCDetectionEvaluator(dataset_name)  # not working
         # return COCOEvaluator(dataset_name, ("bbox",), False, output_dir=output_folder)
-        return VinbigdataEvaluator(dataset_name, ("bbox",), False, output_dir=output_folder)
+        return ModEvaluator(dataset_name, ("bbox",), False, output_dir=output_folder)
 
     def build_hooks(self):
         hooks = super(MyTrainer, self).build_hooks()
@@ -1106,11 +1091,7 @@ class Flags:
     outdir: str = "results/det2"
 
     # Data config
-    #imgdir_name: str = "vinbigdata-chest-xray-resized-png-256x256"
-    #split_mode: str = "all_train"  # all_train or valid20
     seed: int = 111
-    #train_data_type: str = "original"  # original or wbf
-    #use_class14: bool = False
     # Training config
     iter: int = 10000
     ims_per_batch: int = 2  # images per batch, this corresponds to "total batch size"
@@ -1135,8 +1116,6 @@ class Flags:
 flags_dict = {
     "debug": False,
     "outdir": OUTPUT_DIR, 
-    #"imgdir_name": "vinbigdata-chest-xray-resized-png-256x256",
-    #"split_mode": "valid20",
     "iter": 1000000,
     "roi_batch_size_per_image": 512,
     "ims_per_batch":BATCH_SIZE,
@@ -1187,6 +1166,7 @@ for d in ["train","tune","test"]:
     MetadataCatalog.get("pedue_" + d).set(thing_classes=classes)
 metadata = MetadataCatalog.get("pedue_train")
 
+#one can visualize examples of augmented data here if desired:
 #dataset_dicts = get_dicts("train")
 
 #from pathlib import Path
@@ -1225,15 +1205,9 @@ cfg.OUTPUT_DIR = str(outdir)
 print(f"cfg.OUTPUT_DIR {original_output_dir} -> {cfg.OUTPUT_DIR}")
 
 config_name = "COCO-Detection/faster_rcnn_X_101_32x8d_FPN_3x.yaml" 
-#"COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"
 cfg.merge_from_file(model_zoo.get_config_file(config_name))
 cfg.DATASETS.TRAIN = ("pedue_train",)
 cfg.DATASETS.TEST = ("pedue_tune",)
-#cfg.DATASETS.TRAIN = ("vinbigdata_train",)
-#if split_mode == "all_train":
-#    cfg.DATASETS.TEST = ()
-#else:
-#    cfg.DATASETS.TEST = ("vinbigdata_valid",)
 cfg.TEST.EVAL_PERIOD = flags.eval_period
 
 cfg.DATALOADER.NUM_WORKERS = flags.num_workers
@@ -1260,3 +1234,35 @@ trainer.resume_or_load(resume=False)
 
 #os.system("tensorboard --logdir "+cfg.OUTPUT_DIR+" --bind_all &")
 trainer.train()
+
+#how to get started with evaluation:
+
+#IMAGE_FOLDER_PATH="/home/appuser/detectron2_repo/SHARED/image/pedue-cropnorm-8bit/"
+#METADATA_FILE_PATH="/home/appuser/detectron2_repo/SHARED/bbox-2classonly.csv"
+#SAVED_MODEL_PATH = "/home/appuser/detectron2_repo/SHARED/model_final_2CLASS.pth"
+
+#cfg.MODEL.WEIGHTS = SAVED_MODEL_PATH  # path to the model we just trained
+#cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.20   # set a custom testing threshold
+#predictor = DefaultPredictor(cfg)
+#import pandas as pd
+#from sklearn.metrics import roc_auc_score
+#from detectron2.utils.visualizer import ColorMode
+#dataset_dicts = get_dicts("test")
+
+#im = cv2.imread("image_file_name")
+#outputs = predictor(im)  # format is documented at https://detectron2.readthedocs.io/tutorials/models.html#model-output-format
+
+#can access items in outputs:
+#boxes=outputs['instances'].to("cpu").pred_boxes
+#classes=outputs['instances'].to("cpu").pred_classes.numpy()
+#scores=outputs['instances'].to("cpu").scores.numpy()
+
+#v = Visualizer(im[:, :, ::-1],
+#                   metadata=pedue_metadata, 
+#                   scale=1.0, 
+#                   instance_mode=ColorMode.IMAGE_BW  )
+#out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+#imgpath='/pathtosaveimage/'+"image_file_name"
+#cv2.imwrite(imgpath, out.get_image()[:, :, ::-1])
+
+
