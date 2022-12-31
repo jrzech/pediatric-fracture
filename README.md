@@ -61,5 +61,4 @@ Once in the docker image, run ./dockerfinish.sh to install additional needed lib
 ./jupyter.sh starts a Jupyter Notebook in the docker image.
 To remove the docker image, run ./rmdet.sh after exiting the image.
 
-Please note that within the object-detection folder there is a docker-config
-folder. This contains the following files: 
+Trained weakly- and strongly-supervised models are too large to upload to github; these can be downloaded from <<TBD>>.
