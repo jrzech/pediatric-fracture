@@ -11,7 +11,7 @@ source activate ped-arm-cnn
 python -m ipykernel install --user --name ped-arm-cnn --display-name "Python (ped-arm-cnn)"
 ```
 
-Trained weakly-supervised model can be downloaded from [here](https://drive.google.com/file/d/1IrKFgroRTsw9kmOM2Llo_bQ211y1lISq/view?usp=sharing)
+Trained weakly-supervised model can be downloaded from [here](https://drive.google.com/file/d/1IrKFgroRTsw9kmOM2Llo_bQ211y1lISq/view?usp=sharing).
 
 
 The code for this approach is adapted from code provided at https://github.com/jrzech/reproduce-chexnet.
@@ -64,4 +64,4 @@ Once in the docker image, run ./dockerfinish.sh to install additional needed lib
 ./jupyter.sh starts a Jupyter Notebook in the docker image.
 To remove the docker image, run ./rmdet.sh after exiting the image.
 
-Trained strongly-supervised model can be downloaded from [here](https://drive.google.com/file/d/1pIz2gu8qqc6AeuLRn1yZ8iiAcqPI_npW/view?usp=sharing)
+Trained strongly-supervised model can be downloaded from [here](https://drive.google.com/file/d/1pIz2gu8qqc6AeuLRn1yZ8iiAcqPI_npW/view?usp=sharing).
