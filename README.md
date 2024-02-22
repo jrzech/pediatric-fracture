@@ -1,5 +1,7 @@
 # pediatric-fracture
 
+This repo contains training code and model weights used in the paper [Artificial intelligence to identify fractures on pediatric and young adult upper extremity radiographs](https://pubmed.ncbi.nlm.nih.gov/37740031/) previously published in Pediatric Radiology.
+
 Two directories in this repo correspond to two different modeling approaches.
 
 (1) cnn: weakly-supervised EfficientNetV2-S. Create environment to run this code in conda (assumes you have already installed Anaconda / Miniconda):
